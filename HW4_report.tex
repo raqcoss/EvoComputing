@@ -1,0 +1,161 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{natbib}
+\usepackage{xcolor}
+\geometry{margin=1in}
+\sisetup{round-mode=places,round-precision=3}
+
+\title{Ant Colony Optimization Parameter Study on Asymmetric TSP Instances}
+\author{Master Student in Computer Science}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report investigates the performance impact of three Ant Colony Optimization (ACO) parameter configurations when solving the asymmetric Traveling Salesman Problem (ATSP). We compare settings for the pheromone influence ($\alpha$), heuristic influence ($\beta$), and evaporation rate ($\rho$) across three TSPLIB ATSP instances (\texttt{br17}, \texttt{ft53}, and \texttt{kro124p}). For each instance and configuration, we execute 31 independent runs from different random seeds, summarize final tour lengths using descriptive statistics, evaluate the number of times the best-known value is reached, and examine statistical significance with the Wilcoxon rank-sum (Mann--Whitney U) test. We present aggregated tables and plots, and discuss the observed performance trends and trade-offs among the configurations.
+\end{abstract}
+
+\section{Introduction}
+The Traveling Salesman Problem (TSP) and its asymmetric variant (ATSP) are canonical NP-hard problems in combinatorial optimization \citep{garey1979computers}. The ATSP models directed distances (or costs), which breaks symmetry and more closely reflects many real applications such as one-way street networks and asymmetric logistics \citep{reInelt1995}. Metaheuristics, and in particular Ant Colony Optimization (ACO), have been widely applied to TSP variants due to their flexibility and strong performance \citep{dorigo1996ant,dorigo1997aco,stuetzle2000extension}.
+
+This study evaluates the impact of ACO parameters on solution quality. We consider the pheromone importance ($\alpha$), heuristic importance ($\beta$), and pheromone evaporation rate ($\rho$). We provide an implementation from scratch (without optimization frameworks) and run experiments on three standard ATSP instances from TSPLIB \citep{tsplib}. Our goal is to analyze which parameter settings yield the best trade-offs across instances, supported by statistical testing and careful visualizations.
+
+\section{Background}
+\subsection{Problem: Asymmetric TSP}
+In the ATSP, we are given a complete directed graph $G=(V,E)$ with $|V|=n$ nodes and a cost matrix $C=(c_{ij})$ where $c_{ij}$ may differ from $c_{ji}$. The goal is to find a Hamiltonian cycle (tour) that visits each node exactly once and returns to the start, minimizing the total cost. The ATSP generalizes TSP and remains NP-hard \citep{garey1979computers}. Standard benchmark instances are available in TSPLIB, including \texttt{br17}, \texttt{ft53}, and \texttt{kro124p} used in this work \citep{tsplib}.
+
+\subsection{Algorithms: Ant Colony Optimization and parameter roles}
+Ant Colony Optimization (ACO) is a population-based metaheuristic inspired by the foraging behavior of ants \citep{dorigo1996ant,dorigo1997aco}. In ACO for (A)TSP, a set of ants construct tours probabilistically, guided by a pheromone matrix $\tau$ and heuristic information $\eta$ (often $\eta_{ij} = 1/(c_{ij}+\epsilon)$). The transition probability from city $i$ to $j$ is typically given by
+\begin{equation}
+P_{ij} \propto (\tau_{ij})^{\alpha} (\eta_{ij})^{\beta},
+\end{equation}
+where $\alpha>0$ controls the influence of pheromone and $\beta>0$ controls the influence of heuristic information. After constructing solutions, pheromone is updated via evaporation and deposition. The pheromone evaporation rate $\rho \in (0,1]$ reduces pheromone levels each iteration, enabling exploration and limiting unlimited accumulation. Deposits are usually inversely proportional to a tour length (e.g., $Q / L$). Extensions and parameter settings for ACO on TSP are discussed in \citet{dorigo1997aco,stuetzle2000extension}.
+
+\section{Experimental Setup}
+\subsection{Implementation details}
+We implemented ACO for ATSP in Python from scratch, without using metaheuristic libraries. The implementation includes a TSPLIB parser supporting FULL\_MATRIX ATSP instances (both plain and gzipped). The heuristic is $\eta_{ij} = 1/(c_{ij}+10^{-10})$. To avoid numerical issues, probabilities are normalized with fallback to uniform choice if necessary. Pheromone update applies global evaporation by $(1-\rho)$ and deposits $Q/L$ along constructed tours (with $Q=100$).
+
+We ran all experiments from the notebook \texttt{EvoComputing/HW4.ipynb}. Results (tables) are exported into \texttt{EvoComputing/results\_nb/} and figures into \texttt{EvoComputing/figs/}. The code seeds NumPy for reproducibility on each run.
+
+\subsection{Parameter configurations}
+We compared three configurations:
+\begin{itemize}
+  \item Config1: $\alpha=1.0$, $\beta=2.0$, $\rho=0.10$
+  \item Config2: $\alpha=2.0$, $\beta=1.0$, $\rho=0.05$
+  \item Config3: $\alpha=0.5$, $\beta=3.0$, $\rho=0.20$
+\end{itemize}
+All other ACO parameters were fixed: number of ants $=30$, iterations $=100$, $Q=100$.
+
+\subsection{Experimental protocol}
+For each instance (\texttt{br17}, \texttt{ft53}, \texttt{kro124p}) and configuration, we executed $31$ independent runs (random seeds 0--30). As recommended in heuristic benchmarking, we summarize the distribution of final tour lengths using mean, median, and standard deviation. We also count how many runs match the best-known value listed in TSPLIB (where available). For statistical analysis, we perform pairwise Wilcoxon rank-sum (Mann--Whitney U) tests \citep{mann1947test,hollander2013nonparametric}, comparing final tour lengths between configurations per instance, using a significance threshold of $\alpha=0.05$ (two-sided).
+
+\section{Results}
+\subsection{Tables and descriptive statistics}
+We aggregate statistics per instance and configuration in CSV files:\\
+\texttt{EvoComputing/results\_nb/summary\_br17.csv}, \\
+\texttt{EvoComputing/results\_nb/summary\_ft53.csv}, and \\
+\texttt{EvoComputing/results\_nb/summary\_kro124.csv}.\\
+Each summary contains mean, median, standard deviation, minimum, maximum, the number of times the best-known value was reached, and the best-known value itself.
+
+For convenience, Figure~\ref{fig:times-best} shows the number of times the best-known value was reached across configurations and instances, and Figure~\ref{fig:mean-perf} shows the mean final tour length per configuration and instance. Per-instance distributions of final tour length are provided as boxplots (Figure~\ref{fig:boxplots}).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=.9\linewidth]{figs/aco_times_best_known.png}
+  \caption{Number of times the best-known value was reached (31 runs).}
+  \label{fig:times-best}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=.9\linewidth]{figs/aco_mean_performance.png}
+  \caption{Mean final tour length per configuration and instance. Lower is better.}
+  \label{fig:mean-perf}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/aco_boxplot_br17.png}
+    \caption{br17}
+  \end{subfigure}\hfill
+  \begin{subfigure}{.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/aco_boxplot_ft53.png}
+    \caption{ft53}
+  \end{subfigure}\\[6pt]
+  \begin{subfigure}{.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/aco_boxplot_kro124.png}
+    \caption{kro124p}
+  \end{subfigure}
+  \caption{Final tour distributions across 31 runs by configuration.}
+  \label{fig:boxplots}
+\end{figure}
+
+\subsection{Statistical tests}
+For each instance, we applied Mann--Whitney U tests (two-sided) between each pair of configurations on the 31 final tour lengths (per configuration). The test assesses whether one configuration tends to yield different distributions compared to another without assuming normality \citep{hollander2013nonparametric}. In our code, this is conducted via \texttt{scipy.stats.mannwhitneyu}. Significant differences (p-value $<0.05$) are flagged in the console output of the notebook.
+
+\subsection{Discussion}
+Overall, the results demonstrate that ACO performance depends on the balance between pheromone exploitation and heuristic guidance, as well as the evaporation dynamics. A larger $\beta$ (greater emphasis on heuristic information) can accelerate convergence on some instances but may also risk premature convergence if evaporation $\rho$ is low. Conversely, higher $\rho$ promotes exploration by limiting pheromone saturation, potentially improving robustness at the cost of slower exploitation. These trade-offs are visible in the plots and statistics.
+
+Instance-specific behaviors are typical in metaheuristics: some settings perform better on smaller or more structured instances (e.g., \texttt{br17}) while others scale more favorably to larger or noisier instances (\texttt{ft53}, \texttt{kro124p}). The statistical tests provide evidence on whether observed differences are likely due to chance. Where significant, the results support claims that one configuration outperforms another on a specific instance; where non-significant, differences should be interpreted cautiously as not conclusive at the chosen significance level.
+
+\section{Conclusion}
+We conducted a controlled study of three ACO parameter configurations on three ATSP instances, using 31 independent runs per configuration. The results, supported by descriptive statistics, visualizations, and nonparametric statistical tests, show that parameter choices substantially affect performance and robustness. The study highlights the need to tune $\alpha$, $\beta$, and $\rho$ jointly, balancing heuristic bias and pheromone dynamics. Future work may explore automatic parameter control, hybridizations with local search, and scaling to larger ATSP instances.
+
+\section*{Reproducibility}
+All experiments were executed from the provided notebook (\texttt{EvoComputing/HW4.ipynb}). Summaries and figures are saved under \texttt{EvoComputing/results\_nb/} and \texttt{EvoComputing/figs/}. The TSPLIB instances \texttt{br17.atsp}, \texttt{ft53.atsp}, and \texttt{kro124p.atsp} are used (either plain or gzipped). Random seeds 0--30 are used across the 31 runs for each configuration.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{9}
+\bibitem[Garey and Johnson(1979)]{garey1979computers}
+Michael R. Garey and David S. Johnson.
+\newblock \emph{Computers and Intractability: A Guide to the Theory of NP-Completeness}.
+\newblock W. H. Freeman, 1979.
+
+\bibitem[Dorigo et~al.(1996)]{dorigo1996ant}
+Marco Dorigo, Vittorio Maniezzo, and Alberto Colorni.
+\newblock Ant system: Optimization by a colony of cooperating agents.
+\newblock \emph{IEEE Transactions on Systems, Man, and Cybernetics, Part B}, 26(1):29--41, 1996.
+
+\bibitem[Dorigo and Gambardella(1997)]{dorigo1997aco}
+Marco Dorigo and Luca~M. Gambardella.
+\newblock Ant colony system: A cooperative learning approach to the traveling salesman problem.
+\newblock \emph{IEEE Transactions on Evolutionary Computation}, 1(1):53--66, 1997.
+
+\bibitem[St"{u}tzle and Hoos(2000)]{stuetzle2000extension}
+Thomas St"{u}tzle and Holger~H. Hoos.
+\newblock MAX--MIN Ant System.
+\newblock \emph{Future Generation Computer Systems}, 16(8):889--914, 2000.
+
+\bibitem[TSPLIB(1995)]{tsplib}
+Gerhard Reinelt.
+\newblock TSPLIB---A traveling salesman problem library.
+\newblock \emph{ORSA Journal on Computing}, 3(4):376--384, 1991.\newline
+Website: \url{http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/}
+
+\bibitem[Mann and Whitney(1947)]{mann1947test}
+Henry~B. Mann and Donald~R. Whitney.
+\newblock On a test of whether one of two random variables is stochastically larger than the other.
+\newblock \emph{The Annals of Mathematical Statistics}, 18(1):50--60, 1947.
+
+\bibitem[Hollander et~al.(2013)]{hollander2013nonparametric}
+Myles Hollander, Douglas~A. Wolfe, and Eric Chicken.
+\newblock \emph{Nonparametric Statistical Methods} (3rd ed.).
+\newblock Wiley, 2013.
+\end{thebibliography}
+
+\end{document}

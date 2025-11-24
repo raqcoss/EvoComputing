@@ -1,0 +1,4 @@
+Instance,Configuration,Mean,Median,Std Dev,Min,Max,Times Best Known,Best Known
+br17,Config1,39.0,39.0,0.0,39.0,39.0,31,39
+br17,Config2,39.0,39.0,0.0,39.0,39.0,31,39
+br17,Config3,39.0,39.0,0.0,39.0,39.0,31,39
